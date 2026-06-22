@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .tab-bar { display:flex; gap:4px; margin-bottom:20px; background:var(--bg-secondary);
+             padding:4px; border-radius:10px; width:fit-content; }
+  .tab-btn { padding:8px 20px; border-radius:8px; border:none; background:transparent;
+             color:var(--text-secondary); font-weight:600; font-size:14px; cursor:pointer; }
+  .tab-btn.active { background:var(--accent); color:#fff; }
+  .tab-panel { display:none; } .tab-panel.active { display:block; }
+  .search-bar { display:flex;gap:10px;margin-bottom:16px; }
+  .search-bar input { flex:1;max-width:320px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><span class="logo-dot"></span> IshiTrackers</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="map.html"><span class="icon">🗺️</span> Live Map</a>
+      <a href="history.html"><span class="icon">🛣️</span> Route History</a>
+      <a href="profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="admin.html" class="active"><span class="icon">⚙️</span> Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-outline btn-block" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1>Admin Panel</h1>
+      </div>
+      <div id="adminBadge" style="font-size:13px;color:var(--text-secondary);"></div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Stats -->
+      <div class="grid grid-4" style="margin-bottom:24px;">
+        <div class="card stat-card"><div class="label">Total Users</div><div class="value" id="stUsers">—</div></div>
+        <div class="card stat-card"><div class="label">Total Devices</div><div class="value" id="stDevices">—</div></div>
+        <div class="card stat-card"><div class="label">Online Devices</div><div class="value text-success" id="stLive">—</div></div>
+        <div class="card stat-card"><div class="label">Open Alerts</div><div class="value text-warning" id="stAlerts">—</div></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('devices')">📡 Devices</button>
+        <button class="tab-btn"        onclick="switchTab('users')">👥 Users</button>
+        <button class="tab-btn"        onclick="switchTab('alerts')">🔔 Alerts</button>
+      </div>
+
+      <!-- ========== DEVICES TAB ========== -->
+      <div class="tab-panel active" id="tab-devices">
+        <div class="card">
+          <div class="search-bar">
+            <input type="text" id="devSearch" placeholder="Search device ID…" oninput="renderDevTable()">
+            <button class="btn btn-primary btn-sm" onclick="openDevModal()">+ Add Device</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Device ID</th><th>Owner</th><th>Status</th><th>Battery</th><th>Speed</th><th>Last Update</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="devTbody"><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== USERS TAB ========== -->
+      <div class="tab-panel" id="tab-users">
+        <div class="card">
+          <div class="search-bar">
+            <input type="text" id="userSearch" placeholder="Search name or email…" oninput="renderUserTable()">
+          </div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+            To create a new login account, users must register via
+            <a href="register.html">register.html</a> or Firebase Console → Authentication.
+            Manage roles, device assignments and account status below.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Devices</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="userTbody"><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== ALERTS TAB ========== -->
+      <div class="tab-panel" id="tab-alerts">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div></div>
+            <button class="btn btn-outline btn-sm" onclick="resolveAllAlerts()">Resolve All</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Time</th><th>Device</th><th>Type</th><th>Message</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody id="alertTbody"><tr><td colspan="6" class="text-muted">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEVICE MODAL ===== -->
+<div class="modal-overlay" id="devModal">
+  <div class="modal-box">
+    <h3 id="devModalTitle">Add Device</h3>
+    <div class="error-msg" id="devModalErr"></div>
+    <div class="form-group">
+      <label>Device ID <span style="color:#ef4444">*</span></label>
+      <input type="text" id="mDevId" placeholder="GPS001">
+    </div>
+    <div class="form-group">
+      <label>Secret Key <span style="color:#ef4444">*</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="mDevKey" placeholder="Auto-generated">
+        <button class="btn btn-outline btn-sm" onclick="genKey()">Generate</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Assign to User</label>
+      <select id="mDevOwner"><option value="">— Unassigned —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('devModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveDevBtn" onclick="saveDevice()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ASSIGN MODAL ===== -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box">
+    <h3>Assign Tracker to User</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;" id="assignSubtitle"></p>
+    <div class="form-group">
+      <label>Select User</label>
+      <select id="assignUserSel"><option value="">— Unassigned —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAssign()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDIT USER MODAL ===== -->
+<div class="modal-overlay" id="editUserModal">
+  <div class="modal-box">
+    <h3>Edit User</h3>
+    <div class="form-group"><label>Name</label><input type="text" id="euName"></div>
+    <div class="form-group"><label>Phone</label><input type="tel"  id="euPhone"></div>
+    <div class="form-group">
+      <label>Role</label>
+      <select id="euRole">
+        <option value="customer">Customer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('editUserModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

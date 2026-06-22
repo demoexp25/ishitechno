@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-box">
+    <div class="brand">
+      <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;
+                   box-shadow:0 0 10px #3b82f6;display:inline-block;flex-shrink:0;"></span>
+      IshiTrackers
+    </div>
+    <h2>Create your account</h2>
+
+    <div class="error-msg"  id="errorMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
+
+    <form id="registerForm" autocomplete="off" novalidate>
+      <div class="form-group">
+        <label for="name">Full Name <span style="color:#ef4444">*</span></label>
+        <input type="text" id="name" autocomplete="name"
+               placeholder="Ravi Kumar" required minlength="2">
+      </div>
+      <div class="form-group">
+        <label for="email">Email Address <span style="color:#ef4444">*</span></label>
+        <input type="email" id="email" autocomplete="email"
+               placeholder="ravi@example.com" required>
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input type="tel" id="phone" autocomplete="tel"
+               placeholder="+91 90000 00000">
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label for="password">Password <span style="color:#ef4444">*</span></label>
+        <input type="password" id="password" autocomplete="new-password"
+               placeholder="Minimum 6 characters" required minlength="6">
+        <span id="pwToggle" onclick="togglePw('password','pwToggle')"
+              style="position:absolute;right:12px;top:36px;cursor:pointer;font-size:17px;
+                     color:var(--text-secondary);">👁</span>
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label for="confirmPassword">Confirm Password <span style="color:#ef4444">*</span></label>
+        <input type="password" id="confirmPassword" autocomplete="new-password"
+               placeholder="Re-enter password" required>
+        <span id="cpToggle" onclick="togglePw('confirmPassword','cpToggle')"
+              style="position:absolute;right:12px;top:36px;cursor:pointer;font-size:17px;
+                     color:var(--text-secondary);">👁</span>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div id="pwStrength" style="height:4px;border-radius:4px;background:var(--border-color);overflow:hidden;margin-top:4px;">
+          <div id="pwStrengthBar" style="height:100%;width:0;transition:width 0.3s,background 0.3s;"></div>
+        </div>
+        <div id="pwStrengthLabel" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="registerBtn">
+        Create Account
+      </button>
+    </form>
+    <p class="auth-footer">Already have an account? <a href="login.html">Login</a></p>
+    <p class="auth-footer"><a href="index.html">&larr; Back to home</a></p>
+  </div>
+</div>
+
+<!-- Firebase SDKs (compat, no bundler required) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/register.js"></script>
+</body>
+</html>

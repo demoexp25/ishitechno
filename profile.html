@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><span class="logo-dot"></span> IshiTrackers</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="map.html"><span class="icon">🗺️</span> Live Map</a>
+      <a href="history.html"><span class="icon">🛣️</span> Route History</a>
+      <a href="profile.html" class="active"><span class="icon">👤</span> My Profile</a>
+      <a href="admin.html" id="adminLink" style="display:none;"><span class="icon">⚙️</span> Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-outline btn-block" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1>My Profile</h1>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="grid grid-2">
+
+        <div class="card">
+          <h3 style="margin-bottom:18px;">Account Details</h3>
+          <form id="profileForm">
+            <div class="form-group"><label>Full Name</label><input type="text" id="pName" required></div>
+            <div class="form-group"><label>Email</label><input type="email" id="pEmail" disabled></div>
+            <div class="form-group"><label>Phone</label><input type="tel" id="pPhone"></div>
+            <div class="form-group"><label>Role</label><input type="text" id="pRole" disabled></div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:18px;">Change Password</h3>
+          <form id="pwForm">
+            <div class="form-group"><label>Current Password</label><input type="password" id="curPw" required></div>
+            <div class="form-group"><label>New Password</label><input type="password" id="newPw" required minlength="6"></div>
+            <button type="submit" class="btn btn-outline">Update Password</button>
+          </form>
+
+          <h3 style="margin:28px 0 12px;">Assigned Trackers</h3>
+          <div id="myDevices" style="font-size:13px;color:var(--text-muted);">Loading…</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  document.getElementById("menuToggle").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("open");
+  });
+
+  let _user;
+  requireAuth((user, profile) => {
+    _user = user;
+    if (profile.role === "admin") document.getElementById("adminLink").style.display = "flex";
+    document.getElementById("pName").value  = profile.name  || "";
+    document.getElementById("pEmail").value = profile.email || user.email;
+    document.getElementById("pPhone").value = profile.phone || "";
+    document.getElementById("pRole").value  = profile.role;
+    const devs = profile.devices || [];
+    document.getElementById("myDevices").innerHTML = devs.length
+      ? devs.map(d => `<a href="map.html?device=${d}" class="badge badge-online" style="margin:3px;display:inline-flex;">${d}</a>`).join("")
+      : "No trackers assigned yet.";
+  });
+
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name  = document.getElementById("pName").value.trim();
+    const phone = document.getElementById("pPhone").value.trim();
+    try {
+      await db.ref("users/" + _user.uid).update({ name, phone });
+      await _user.updateProfile({ displayName: name });
+      showToast("Profile updated.", "success");
+    } catch (err) { showToast(err.message, "danger"); }
+  });
+
+  document.getElementById("pwForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const curPw = document.getElementById("curPw").value;
+    const newPw = document.getElementById("newPw").value;
+    try {
+      const cred = firebase.auth.EmailAuthProvider.credential(_user.email, curPw);
+      await _user.reauthenticateWithCredential(cred);
+      await _user.updatePassword(newPw);
+      showToast("Password updated.", "success");
+      document.getElementById("pwForm").reset();
+    } catch (err) { showToast(friendlyAuthError(err.code), "danger"); }
+  });
+</script>
+</body>
+</html>

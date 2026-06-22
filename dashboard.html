@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="logo-dot"></span> IshiTrackers
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="active"><span class="icon">🏠</span> Dashboard</a>
+      <a href="map.html"><span class="icon">🗺️</span> Live Map</a>
+      <a href="history.html"><span class="icon">🛣️</span> Route History</a>
+      <a href="profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="admin.html" id="adminLink" style="display:none;"><span class="icon">⚙️</span> Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sidebarUser" style="font-size:13px;color:var(--text-secondary);padding:8px 0;"></div>
+      <button class="btn btn-outline btn-block" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1>Dashboard</h1>
+      </div>
+      <div id="liveClock" style="font-size:13px;color:var(--text-secondary);"></div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Stats row -->
+      <div class="grid grid-4" style="margin-bottom:24px;">
+        <div class="card stat-card">
+          <div class="label">Total Trackers</div>
+          <div class="value" id="stTotal">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Online Now</div>
+          <div class="value text-success" id="stOnline">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Offline</div>
+          <div class="value text-danger" id="stOffline">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Open Alerts</div>
+          <div class="value text-warning" id="stAlerts">—</div>
+        </div>
+      </div>
+
+      <!-- Tracker cards grid -->
+      <div id="trackerGrid" class="grid grid-3">
+        <div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto 14px;"></div>Loading trackers…
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

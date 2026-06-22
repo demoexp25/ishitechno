@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Route History — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #histMap { width:100%; height:400px; border-radius:var(--radius); border:1px solid var(--border-color); }
+  .leaflet-popup-content-wrapper { background:#161e2e; color:#e8edf6; }
+  .leaflet-popup-tip { background:#161e2e; }
+  .filter-bar { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px; }
+  .filter-bar .form-group { margin:0; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><span class="logo-dot"></span> IshiTrackers</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="map.html"><span class="icon">🗺️</span> Live Map</a>
+      <a href="history.html" class="active"><span class="icon">🛣️</span> Route History</a>
+      <a href="profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="admin.html" id="adminLink" style="display:none;"><span class="icon">⚙️</span> Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-outline btn-block" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1>Route History</h1>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="card">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>Device</label>
+            <select id="devSel"><option>Loading…</option></select>
+          </div>
+          <div class="form-group">
+            <label>From</label>
+            <input type="date" id="fromDate">
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <input type="date" id="toDate">
+          </div>
+          <button class="btn btn-primary" id="loadBtn">Load Route</button>
+        </div>
+
+        <div id="histMap"></div>
+
+        <div id="playbackWrap" style="display:none;margin-top:14px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="playBtn">▶ Play</button>
+            <input type="range" id="slider" min="0" max="0" value="0" style="flex:1;min-width:120px;">
+            <span id="sliderLabel" style="font-size:13px;color:var(--text-secondary);min-width:200px;"></span>
+          </div>
+          <div id="routeStats" style="margin-top:10px;font-size:13px;color:var(--text-secondary);"></div>
+        </div>
+
+        <div class="empty-state" id="histEmpty">
+          <div class="e-icon">🛣️</div>
+          <p>Select a device and date range, then click <b>Load Route</b>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  document.getElementById("menuToggle").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("open");
+  });
+
+  let hMap, routeLine, playMarker;
+  let pts = []; // array of { lat, lon, speed, timestamp }
+  let playInt = null;
+
+  hMap = L.map("histMap").setView([16.5062, 80.648], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors", maxZoom: 19
+  }).addTo(hMap);
+
+  const urlDev = new URLSearchParams(window.location.search).get("device");
+
+  requireAuth((user, profile) => {
+    if (profile.role === "admin") document.getElementById("adminLink").style.display = "flex";
+    const isAdmin = profile.role === "admin";
+    const sel = document.getElementById("devSel");
+
+    const populate = (ids) => {
+      sel.innerHTML = ids.length
+        ? ids.map(id => `<option value="${id}" ${urlDev===id?"selected":""}>${id}</option>`).join("")
+        : "<option>No devices</option>";
+    };
+
+    if (isAdmin) {
+      db.ref("devices").once("value").then(s => populate(Object.keys(s.val() || {})));
+    } else {
+      populate(profile.devices || []);
+    }
+  });
+
+  // Default date range: last 7 days
+  const t = new Date(), w = new Date(t.getTime() - 7*86400000);
+  document.getElementById("toDate").value   = t.toISOString().split("T")[0];
+  document.getElementById("fromDate").value = w.toISOString().split("T")[0];
+
+  document.getElementById("loadBtn").addEventListener("click", () => {
+    const id   = document.getElementById("devSel").value;
+    const from = new Date(document.getElementById("fromDate").value).getTime();
+    const to   = new Date(document.getElementById("toDate").value).getTime() + 86399999;
+
+    if (!id) { showToast("Select a device first.", "warning"); return; }
+
+    document.getElementById("loadBtn").textContent = "Loading…";
+
+    db.ref("history/" + id).orderByChild("timestamp").startAt(from).endAt(to)
+      .once("value")
+      .then((snap) => {
+        pts = [];
+        snap.forEach((c) => { const v = c.val(); if (v.lat != null) pts.push(v); });
+        drawRoute();
+      })
+      .finally(() => { document.getElementById("loadBtn").textContent = "Load Route"; });
+  });
+
+  function drawRoute() {
+    if (routeLine)   { hMap.removeLayer(routeLine);  routeLine   = null; }
+    if (playMarker)  { hMap.removeLayer(playMarker); playMarker  = null; }
+    const empty  = document.getElementById("histEmpty");
+    const wrap   = document.getElementById("playbackWrap");
+
+    if (pts.length === 0) {
+      empty.style.display = "block"; wrap.style.display = "none";
+      showToast("No history data for that range.", "warning"); return;
+    }
+    empty.style.display = "none"; wrap.style.display = "block";
+
+    const lls = pts.map(p => [p.lat, p.lon]);
+    routeLine = L.polyline(lls, { color: "#3b82f6", weight: 4, opacity: .85 }).addTo(hMap);
+    hMap.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+    L.circleMarker(lls[0],               { radius:7, color:"#22c55e", fillOpacity:1, fillColor:"#22c55e" }).addTo(hMap).bindPopup("🟢 Start");
+    L.circleMarker(lls[lls.length - 1],  { radius:7, color:"#ef4444", fillOpacity:1, fillColor:"#ef4444" }).addTo(hMap).bindPopup("🔴 End");
+
+    playMarker = L.marker(lls[0], { icon: L.divIcon({
+      className:"", iconSize:[28,28], iconAnchor:[14,14],
+      html:'<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;border:2px solid #0b0f17;font-size:14px;">🚗</div>'
+    })}).addTo(hMap);
+
+    const slider = document.getElementById("slider");
+    slider.max   = pts.length - 1;
+    slider.value = 0;
+    updateLabel(0);
+
+    // Stats
+    const maxSpeed = Math.max(...pts.map(p => p.speed || 0));
+    const distKm   = (pts.reduce((acc, p, i) => {
+      if (i === 0) return 0;
+      return acc + haverKm(pts[i-1].lat, pts[i-1].lon, p.lat, p.lon);
+    }, 0)).toFixed(2);
+    document.getElementById("routeStats").textContent =
+      `📏 Total distance: ${distKm} km  ·  ⚡ Max speed: ${maxSpeed} km/h  ·  📍 ${pts.length} points`;
+  }
+
+  document.getElementById("slider").addEventListener("input", (e) => {
+    const i = parseInt(e.target.value);
+    playMarker.setLatLng([pts[i].lat, pts[i].lon]);
+    updateLabel(i);
+  });
+
+  document.getElementById("playBtn").addEventListener("click", () => {
+    const btn = document.getElementById("playBtn");
+    const slider = document.getElementById("slider");
+    if (playInt) {
+      clearInterval(playInt); playInt = null; btn.textContent = "▶ Play"; return;
+    }
+    btn.textContent = "⏸ Pause";
+    playInt = setInterval(() => {
+      let i = parseInt(slider.value) + 1;
+      if (i >= pts.length) { clearInterval(playInt); playInt = null; btn.textContent = "▶ Play"; return; }
+      slider.value = i;
+      playMarker.setLatLng([pts[i].lat, pts[i].lon]);
+      updateLabel(i);
+    }, 300);
+  });
+
+  function updateLabel(i) {
+    const p = pts[i];
+    const d = p.timestamp ? new Date(p.timestamp).toLocaleString() : "—";
+    document.getElementById("sliderLabel").textContent = `${d} · ${p.speed ?? 0} km/h`;
+  }
+
+  function haverKm(la1, lo1, la2, lo2) {
+    const R = 6371, r = x => x * Math.PI / 180;
+    const dLat = r(la2-la1), dLon = r(lo2-lo1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+</script>
+</body>
+</html>

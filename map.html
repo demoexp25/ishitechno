@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Map — IshiTrackers</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+  #map { width:100%; height:calc(100vh - 64px); }
+  .leaflet-popup-content-wrapper { background:#161e2e; color:#e8edf6; border:1px solid #232d42; }
+  .leaflet-popup-tip            { background:#161e2e; }
+  .leaflet-control-zoom a       { background:#161e2e !important; color:#fff !important; border-color:#232d42 !important; }
+  .map-panel {
+    position:absolute; top:80px; left:260px; z-index:400;
+    width:290px; max-height:calc(100vh - 110px); overflow-y:auto;
+    background:var(--bg-card); border:1px solid var(--border-color);
+    border-radius:var(--radius); box-shadow:var(--shadow);
+  }
+  .map-panel-header {
+    padding:12px 14px; border-bottom:1px solid var(--border-color);
+    font-size:12px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--text-secondary);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .dev-row { padding:12px 14px; border-bottom:1px solid var(--border-color); cursor:pointer; }
+  .dev-row:hover { background:var(--bg-card-hover); }
+  .dev-row.active { background:var(--accent-soft); }
+  @media(max-width:900px){ .map-panel{ left:10px; width:calc(100% - 20px); top:72px; } }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><span class="logo-dot"></span> IshiTrackers</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="map.html" class="active"><span class="icon">🗺️</span> Live Map</a>
+      <a href="history.html"><span class="icon">🛣️</span> Route History</a>
+      <a href="profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="admin.html" id="adminLink" style="display:none;"><span class="icon">⚙️</span> Admin Panel</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-outline btn-block" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1>Live Map</h1>
+      </div>
+      <div id="refreshBadge" style="font-size:12px;color:var(--text-secondary);
+           background:var(--bg-card);padding:4px 12px;border-radius:20px;border:1px solid var(--border-color);">
+        🔴 Connecting…
+      </div>
+    </div>
+
+    <div style="position:relative;">
+      <div class="map-panel" id="mapPanel">
+        <div class="map-panel-header">
+          <span>Trackers</span>
+          <span id="onlineCount" style="color:var(--success);font-size:12px;"></span>
+        </div>
+        <div id="deviceListPanel"></div>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="js/map.js"></script>
+</body>
+</html>
